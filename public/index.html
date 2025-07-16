@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pakhiiiiiiiiiiiii 🐦 Chat</title>
+    <link rel="icon" href="chat-icon.png" type="image/png">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background-color: #075E54; /* WhatsApp Dark Green */
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+        .header .logo {
+            height: 30px;
+            width: 30px;
+            margin-right: 10px;
+        }
+        .header .app-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            flex-grow: 1; /* Allows app name to take available space */
+            text-align: center;
+        }
+        .header .group-create-icon {
+            cursor: pointer;
+            font-size: 1.8em; /* Plus icon for group create */
+            margin-left: 10px;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column; /* Default for mobile */
+        }
+
+        /* User List and Recent Chats (Left Pane on Desktop, Top on Mobile) */
+        .sidebar {
+            width: 100%; /* Full width on mobile */
+            max-height: 250px; /* Limited height on mobile */
+            overflow-y: auto;
+            background-color: #fff;
+            border-right: 1px solid #eee;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Horizontally Scrollable User List */
+        .active-users-scroll {
+            white-space: nowrap;
+            overflow-x: auto;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .user-avatar {
+            display: inline-block;
+            text-align: center;
+            margin: 0 10px;
+            cursor: pointer;
+            position: relative;
+        }
+        .user-avatar img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #25D366; /* Green border for active */
+        }
+        .user-avatar .username {
+            font-size: 0.8em;
+            color: #555;
+            white-space: normal;
+            max-width: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+            margin-top: 5px;
+        }
+        .user-avatar .active-dot {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 12px;
+            height: 12px;
+            background-color: #25D366; /* Active green */
+            border-radius: 50%;
+            border: 2px solid white;
+            display: none; /* Hidden by default, shown for active users */
+        }
+        .user-avatar.active .active-dot {
+            display: block;
+        }
+        .user-avatar.group-chat-icon {
+            border: none; /* No border for group icon */
+            font-size: 3em; /* Larger size for plus */
+            color: #ccc;
+            line-height: 60px; /* Center icon vertically */
+        }
+        .user-avatar.group-chat-icon img {
+            border: none;
+            width: 60px;
+            height: 60px;
+            background-color: #eee;
+            border-radius: 50%;
+        }
+
+
+        /* Recent Chats List */
+        .recent-chats-list {
+            flex-grow: 1; /* Takes remaining space in sidebar */
+            overflow-y: auto;
+        }
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .chat-item:hover {
+            background-color: #f5f5f5;
+        }
+        .chat-item.selected {
+            background-color: #e6f7ff; /* Light blue for selected chat */
+        }
+        .chat-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .chat-info {
+            flex-grow: 1;
+        }
+        .chat-info .name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        .chat-info .last-message {
+            font-size: 0.9em;
+            color: #777;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Chat Area (Right Pane on Desktop, Bottom on Mobile) */
+        .chat-area {
+            flex: 1; /* Takes available space */
+            background-color: #e5ddd5; /* WhatsApp chat background */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            display: none; /* Hidden by default until a chat is selected */
+        }
+        .chat-area.active {
+            display: flex;
+        }
+
+        .chat-header {
+            background-color: #075E54;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .chat-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .chat-header .chat-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            flex-grow: 1;
+        }
+        .chat-header .back-button {
+            font-size: 1.5em;
+            margin-right: 10px;
+            cursor: pointer;
+            display: none; /* Only visible on mobile */
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column-reverse; /* New messages at bottom */
+        }
+        .message {
+            display: flex;
+            margin-bottom: 10px;
+            max-width: 80%;
+        }
+        .message.sent {
+            justify-content: flex-end;
+            margin-left: auto;
+        }
+        .message.received {
+            justify-content: flex-start;
+            margin-right: auto;
+        }
+        .message-bubble {
+            background-color: #DCF8C6; /* Sent message color */
+            padding: 10px 12px;
+            border-radius: 8px;
+            position: relative;
+            word-wrap: break-word;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+        }
+        .message.received .message-bubble {
+            background-color: #FFFFFF; /* Received message color */
+        }
+        .message-bubble .sender-name {
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #075E54; /* Dark green for sender name */
+        }
+        .message-bubble .message-text {
+            font-size: 0.95em;
+            color: #333;
+        }
+        .message-bubble .timestamp {
+            font-size: 0.7em;
+            color: #888;
+            text-align: right;
+            margin-top: 5px;
+            display: block;
+        }
+        .message-bubble img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        .message-bubble a {
+            color: #1a0dab;
+            text-decoration: underline;
+        }
+
+        .typing-indicator {
+            font-size: 0.85em;
+            color: #666;
+            padding: 5px 15px;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+
+        .message-input-area {
+            display: flex;
+            padding: 10px 15px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #ddd;
+            align-items: center;
+        }
+        .message-input-area input[type="text"] {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: #fff;
+            margin-right: 10px;
+            font-size: 1em;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message-input-area button {
+            background-color: #25D366; /* WhatsApp vibrant green */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s ease;
+        }
+        .message-input-area button:hover {
+            background-color: #1DA851;
+        }
+        .message-input-area .attach-button {
+            background: none;
+            color: #777;
+            font-size: 1.8em;
+            margin-right: 5px;
+            width: auto;
+            height: auto;
+            box-shadow: none;
+        }
+        .message-input-area .attach-button:hover {
+            color: #333;
+            background: none;
+        }
+        .file-input {
+            display: none; /* Hide actual file input */
+        }
+        .delete-message-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 0.9em;
+            margin-left: 10px;
+            cursor: pointer;
+            display: none; /* Initially hidden */
+        }
+        .message.sent .message-bubble:hover .delete-message-btn {
+            display: inline-block; /* Show on hover for sender's message */
+        }
+
+
+        /* Group Creation Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.8em;
+            cursor: pointer;
+            color: #888;
+        }
+        .modal h3 {
+            text-align: center;
+            color: #075E54;
+            margin-bottom: 25px;
+        }
+        .modal input[type="text"],
+        .modal input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .modal label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .modal .user-selection {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .modal .user-checkbox {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .modal .user-checkbox input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        .modal .user-checkbox img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .modal .user-checkbox span {
+            font-size: 1em;
+            color: #333;
+        }
+        .modal button {
+            background-color: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        .modal button:hover {
+            background-color: #1DA851;
+        }
+        .modal-message {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+
+        /* Media Queries for Desktop Layout */
+        @media (min-width: 768px) {
+            .main-content {
+                flex-direction: row;
+            }
+            .sidebar {
+                width: 350px; /* Fixed width for sidebar on desktop */
+                max-height: unset; /* Remove max height constraint */
+                border-right: 1px solid #eee;
+            }
+            .chat-area {
+                display: flex; /* Always display on desktop */
+            }
+            .chat-header .back-button {
+                display: none; /* Hide back button on desktop */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="chat-icon.png" alt="Logo" class="logo">
+        <span class="app-name">Pakhiiiiiiiiiiiii 🐦</span>
+        <span class="group-create-icon" id="groupCreateIcon">+</span>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <div class="active-users-scroll" id="activeUsersScroll">
+                </div>
+            <div class="recent-chats-list" id="recentChatsList">
+                <div class="chat-item" data-chat-type="group" data-chat-name="Group Chat" id="groupChatItem">
+                    <img src="chat-icon.png" alt="Group Icon">
+                    <div class="chat-info">
+                        <div class="name">Group Chat</div>
+                        <div class="last-message">Start a group conversation!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+            <div class="chat-header">
+                <span class="back-button" id="backToChats">&lt;</span>
+                <img src="chat-icon.png" alt="Chat Photo" id="currentChatPhoto">
+                <span class="chat-name" id="currentChatName">Select a Chat</span>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                </div>
+            <div class="typing-indicator" id="typingIndicator" style="display: none;"></div>
+            <div class="message-input-area">
+                <input type="text" id="messageInput" placeholder="Type a message...">
+                <label for="imageInput" class="attach-button">&#128247;</label> <input type="file" id="imageInput" accept="image/*" class="file-input">
+                <label for="fileInput" class="attach-button">&#128441;</label> <input type="file" id="fileInput" class="file-input">
+                <button id="sendMessageBtn">&#10148;</button> </div>
+        </div>
+    </div>
+
+    <div id="groupCreationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>Create New Group</h3>
+            <label for="groupName">Group Name:</label>
+            <input type="text" id="groupName" placeholder="Enter group name">
+            <label for="groupPassword">Group Password (optional):</label>
+            <input type="password" id="groupPassword" placeholder="Enter password (e.g., for private groups)">
+
+            <label>Select Members:</label>
+            <div class="user-selection" id="groupMemberSelection">
+                </div>
+            <button id="createGroupBtn">Create Group</button>
+            <div id="groupModalMessage" class="modal-message"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="notify.js"></script>
+    <script src="script.js"></script>
+</body>
+  </html>
+  
