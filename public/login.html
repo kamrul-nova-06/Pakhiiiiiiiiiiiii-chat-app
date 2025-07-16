@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pakhiiiiiiiiiiiii 🐦 Login</title>
+    <link rel="icon" href="chat-icon.png" type="image/png">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0f2f7; /* Light blue background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .login-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        h2 {
+            color: #075E54; /* WhatsApp green-blue */
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .input-group input[type="text"],
+        .input-group input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 12px 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        .input-group input[type="text"]:focus,
+        .input-group input[type="password"]:focus {
+            border-color: #128C7E; /* Darker WhatsApp green */
+            outline: none;
+        }
+        .profile-pic-selection {
+            margin-bottom: 25px;
+        }
+        .profile-pic-selection label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        .profile-pic-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .profile-pic-option {
+            cursor: pointer;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            transition: border-color 0.3s ease;
+            object-fit: cover;
+        }
+        .profile-pic-option.selected {
+            border-color: #25D366; /* WhatsApp vibrant green */
+        }
+        #loginBtn {
+            background-color: #25D366; /* WhatsApp vibrant green */
+            color: white;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: 100%;
+        }
+        #loginBtn:hover {
+            background-color: #1DA851; /* Darker green on hover */
+            transform: translateY(-2px);
+        }
+        #message {
+            color: red;
+            margin-top: 15px;
+            font-size: 0.9em;
+            min-height: 20px; /* To prevent layout shift */
+        }
+        .suggestion {
+            color: #075E54;
+            font-size: 0.9em;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+        @media (max-width: 600px) {
+            .login-container {
+                padding: 25px;
+                border-radius: 10px;
+            }
+            h2 {
+                font-size: 1.5em;
+            }
+            .input-group input {
+                padding: 10px;
+            }
+            #loginBtn {
+                padding: 12px 20px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Welcome to Pakhiiiiiiiiiiiii 🐦</h2>
+        <div class="input-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter your username">
+            <div id="usernameSuggestion" class="suggestion" style="display: none;"></div>
+        </div>
+        <div class="input-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter your password (uss)">
+        </div>
+        <div class="profile-pic-selection">
+            <label>Select Profile Picture:</label>
+            <div class="profile-pic-container">
+                <img src="default1.png" alt="Profile Pic 1" class="profile-pic-option" data-src="default1.png">
+                <img src="default2.png" alt="Profile Pic 2" class="profile-pic-option" data-src="default2.png">
+                </div>
+        </div>
+        <button id="loginBtn">Login</button>
+        <div id="message"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const messageDiv = document.getElementById('message');
+        const profilePicOptions = document.querySelectorAll('.profile-pic-option');
+        const usernameSuggestionDiv = document.getElementById('usernameSuggestion');
+
+        let selectedProfilePic = '';
+        const defaultProfilePics = ['default1.png', 'default2.png'];
+
+        // --- Profile Picture Selection ---
+        profilePicOptions.forEach(img => {
+            img.addEventListener('click', () => {
+                profilePicOptions.forEach(opt => opt.classList.remove('selected'));
+                img.classList.add('selected');
+                selectedProfilePic = img.dataset.src;
+            });
+        });
+
+        // --- Login Persistence (24 hours) ---
+        function checkPersistentLogin() {
+            const lastLogin = localStorage.getItem('lastLoginTime');
+            const storedUsername = localStorage.getItem('username');
+            const storedProfilePic = localStorage.getItem('profilePic');
+
+            if (lastLogin && storedUsername && storedProfilePic) {
+                const now = new Date().getTime();
+                const loginTime = new Date(parseInt(lastLogin)).getTime();
+                const twentyFourHours = 24 * 60 * 60 * 1000;
+
+                if (now - loginTime < twentyFourHours) {
+                    // Login still valid, redirect
+                    console.log('Persistent login valid. Redirecting...');
+                    window.location.href = `index.html?username=${encodeURIComponent(storedUsername)}&profilePic=${encodeURIComponent(storedProfilePic)}`;
+                    return true;
+                } else {
+                    // Expired, clear storage
+                    localStorage.removeItem('lastLoginTime');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('profilePic');
+                    localStorage.removeItem('privateChatHistory');
+                    localStorage.removeItem('groupChatHistory');
+                    console.log('Persistent login expired. Please log in again.');
+                }
+            }
+            return false;
+        }
+
+        // --- Username Suggestion for Previous Login ---
+        let previousUsername = localStorage.getItem('username');
+        if (previousUsername) {
+            usernameInput.addEventListener('input', () => {
+                const currentInput = usernameInput.value.toLowerCase();
+                if (currentInput.length >= 3 && previousUsername.toLowerCase().startsWith(currentInput)) {
+                    usernameSuggestionDiv.textContent = `Did you mean "${previousUsername}"?`;
+                    usernameSuggestionDiv.style.display = 'block';
+                } else {
+                    usernameSuggestionDiv.style.display = 'none';
+                }
+            });
+
+            usernameSuggestionDiv.addEventListener('click', () => {
+                usernameInput.value = previousUsername;
+                usernameSuggestionDiv.style.display = 'none';
+            });
+        }
+
+        // Check for persistent login on page load
+        if (checkPersistentLogin()) {
+            // If checkPersistentLogin returns true, it means we've redirected, so no need to proceed further.
+        } else {
+            loginBtn.addEventListener('click', () => {
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value.trim();
+
+                if (!username || !password) {
+                    messageDiv.textContent = 'Please enter both username and password.';
+                    return;
+                }
+
+                if (password !== 'uss') {
+                    messageDiv.textContent = 'Invalid password.';
+                    return;
+                }
+
+                // If no profile pic selected, assign a random default one
+                let finalProfilePic = selectedProfilePic;
+                if (!finalProfilePic) {
+                    finalProfilePic = defaultProfilePics[Math.floor(Math.random() * defaultProfilePics.length)];
+                }
+
+                // Emit login attempt to server
+                socket.emit('user-login', { username, profilePic: finalProfilePic });
+            });
+
+            socket.on('login-success', (userData) => {
+                messageDiv.textContent = 'Login successful! Redirecting...';
+                localStorage.setItem('username', userData.username);
+                localStorage.setItem('profilePic', userData.profilePic);
+                localStorage.setItem('lastLoginTime', new Date().getTime()); // Store timestamp
+                setTimeout(() => {
+                    window.location.href = `index.html?username=${encodeURIComponent(userData.username)}&profilePic=${encodeURIComponent(userData.profilePic)}`;
+                }, 1000);
+            });
+
+            socket.on('login-failed', (data) => {
+                messageDiv.textContent = data.message;
+                if (data.suggestion) {
+                    usernameSuggestionDiv.textContent = `Try: ${data.suggestion}`;
+                    usernameSuggestionDiv.style.display = 'block';
+                    usernameSuggestionDiv.onclick = () => {
+                        usernameInput.value = data.suggestion;
+                        usernameSuggestionDiv.style.display = 'none';
+                    };
+                }
+            });
+        }
+    </script>
+</body>
+  </html>
+  
